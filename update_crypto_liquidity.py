@@ -91,9 +91,39 @@ def fetch_stablecoin_mcap_1y() -> pd.DataFrame:
         total = (row.get("totalCirculatingUSD") or {}).get("peggedUSD")
         if ts is None or total is None:
             continue
-        date = dt.datetime.utcfromtimestamp(ts).date()
+
+        # --- date 필드 타입에 따라 유연하게 처리 ---
+        date: Optional[dt.date] = None
+
+        # 1) 숫자형 (유닉스 타임스탬프)
+        if isinstance(ts, (int, float)):
+            date = dt.datetime.utcfromtimestamp(int(ts)).date()
+
+        # 2) 문자열인 경우
+        elif isinstance(ts, str):
+            ts_str = ts.strip()
+            # 2-1) 숫자 문자열이면 유닉스 타임으로 간주
+            if ts_str.isdigit():
+                date = dt.datetime.utcfromtimestamp(int(ts_str)).date()
+            else:
+                # 2-2) YYYY-MM-DD, YYYY-MM-DDTHH:MM:SS 형태 등 처리
+                try:
+                    # '2024-01-01T00:00:00Z' -> '2024-01-01'
+                    ts_str_clean = ts_str.split("T")[0]
+                    date = dt.datetime.fromisoformat(ts_str_clean).date()
+                except Exception:
+                    # 알 수 없는 형식이면 스킵
+                    continue
+        else:
+            # 지원하지 않는 타입이면 스킵
+            continue
+
+        if date is None:
+            continue
+
         if not (ONE_YEAR_AGO <= date <= TODAY):
             continue
+
         rows.append(
             {
                 "date": date,
@@ -102,6 +132,10 @@ def fetch_stablecoin_mcap_1y() -> pd.DataFrame:
         )
 
     df = pd.DataFrame(rows).sort_values("date").reset_index(drop=True)
+
+    if df.empty:
+        return df
+
     df["stablecoin_mcap_change_usd"] = df["stablecoin_mcap_usd"].diff()
     return df
 
