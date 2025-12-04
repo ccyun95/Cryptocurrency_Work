@@ -1,0 +1,38 @@
+name: Update Crypto Liquidity Metrics (Safe A)
+
+on:
+  schedule:
+    - cron: "0 11 * * *"   # 매일 11:00 UTC (한국 시간 20:00)
+  workflow_dispatch:        # 필요시 수동 실행
+
+jobs:
+  update-metrics:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run update script
+        run: |
+          python update_crypto_liquidity.py
+
+      - name: Commit and push results
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/*.csv docs/index.html docs/charts/*.png || echo "Nothing to add"
+          git commit -m "Update crypto liquidity metrics (Safe A) $(date -u +'%Y-%m-%d')" || echo "No changes"
+          git push || echo "No changes to push"
