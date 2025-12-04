@@ -150,10 +150,38 @@ def _fetch_farside_etf_all(url: str, total_col_name: str) -> pd.DataFrame:
     예:
       - BTC: https://farside.co.uk/bitcoin-etf-flow-all-data/
       - ETH: https://farside.co.uk/ethereum-etf-flow-all-data/
+
+    Farside가 403(Forbidden)을 반환하면 ETF 데이터는 스킵하고
+    빈 DataFrame을 반환한다.
     """
-    resp = safe_get(url)
+    try:
+        resp = safe_get(url)
+    except requests.exceptions.HTTPError as e:
+        status = getattr(e.response, "status_code", None)
+        if status == 403:
+            print(
+                f"[WARN] Farside 403 Forbidden 발생 ({url}) → ETF 데이터 스킵",
+                file=sys.stderr,
+            )
+            return pd.DataFrame()
+        # 다른 HTTP 에러는 그대로 올림
+        raise
+    except Exception as e:
+        print(
+            f"[WARN] Farside 요청 실패 ({url}) → ETF 데이터 스킵: {e}",
+            file=sys.stderr,
+        )
+        return pd.DataFrame()
+
     html = resp.text
-    tables = pd.read_html(html)
+    try:
+        tables = pd.read_html(html)
+    except Exception as e:
+        print(
+            f"[WARN] Farside HTML 파싱 실패 ({url}) → ETF 데이터 스킵: {e}",
+            file=sys.stderr,
+        )
+        return pd.DataFrame()
 
     target = None
     for t in tables:
@@ -163,7 +191,11 @@ def _fetch_farside_etf_all(url: str, total_col_name: str) -> pd.DataFrame:
             break
 
     if target is None:
-        raise RuntimeError(f"Farside 테이블에서 Date/Total을 찾을 수 없습니다: {url}")
+        print(
+            f"[WARN] Farside 테이블에서 Date/Total을 찾지 못함 ({url}) → ETF 데이터 스킵",
+            file=sys.stderr,
+        )
+        return pd.DataFrame()
 
     # 컬럼 매핑
     col_map = {}
@@ -705,7 +737,22 @@ def main():
     print("[STEP] 2/4 BTC/ETH 현물 ETF 순유입 수집...")
     df_btc_etf = fetch_btc_etf_flows_1y()
     df_eth_etf = fetch_eth_etf_flows_1y()
-    df_etf = pd.merge(df_btc_etf, df_eth_etf, on="date", how="outer").sort_values("date")
+
+    if df_btc_etf.empty and df_eth_etf.empty:
+        print("[WARN] BTC/ETH ETF 데이터가 모두 비어 있음 → ETF 지표는 이번 회차에서 제외", file=sys.stderr)
+        df_etf = pd.DataFrame(columns=["date", "btc_etf_net_flow_usd_mn", "eth_etf_net_flow_usd_mn"])
+    elif df_btc_etf.empty:
+        print("[WARN] BTC ETF 데이터가 비어 있음 → ETH ETF만 사용", file=sys.stderr)
+        df_etf = df_eth_etf.copy()
+    elif df_eth_etf.empty:
+        print("[WARN] ETH ETF 데이터가 비어 있음 → BTC ETF만 사용", file=sys.stderr)
+        df_etf = df_btc_etf.copy()
+    else:
+        df_etf = pd.merge(df_btc_etf, df_eth_etf, on="date", how="outer")
+
+    if not df_etf.empty:
+        df_etf = df_etf.sort_values("date").reset_index(drop=True)
+
     etf_csv = DATA_DIR / "etf_flows.csv"
     df_etf.to_csv(etf_csv, index=False)
     print(f"[OK] {etf_csv}")
