@@ -247,6 +247,9 @@ def fetch_realized_cap_1y(assets=("btc", "eth")) -> pd.DataFrame:
     """
     CoinMetrics Community API로 BTC/ETH CapRealUSD(Realized Cap) 1년치 일별 조회.
     API root: https://community-api.coinmetrics.io/v4
+
+    GitHub Actions 환경에서 403(Forbidden)이 발생할 수 있으므로,
+    403 이면 Realized Cap 지표는 스킵하고 빈 DataFrame을 반환한다.
     """
     url = "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics"
     params = {
@@ -257,7 +260,27 @@ def fetch_realized_cap_1y(assets=("btc", "eth")) -> pd.DataFrame:
         "end_time": TODAY.isoformat(),
         "page_size": 10000,
     }
-    resp = safe_get(url, params=params)
+
+    # --- 여기서 403을 안전하게 처리 ---
+    try:
+        resp = safe_get(url, params=params)
+    except requests.exceptions.HTTPError as e:
+        status = getattr(e.response, "status_code", None)
+        if status == 403:
+            print(
+                "[WARN] CoinMetrics 403 Forbidden → Realized Cap 지표 스킵",
+                file=sys.stderr,
+            )
+            return pd.DataFrame()
+        # 403 이외의 에러는 그대로 올림
+        raise
+    except Exception as e:
+        print(
+            f"[WARN] CoinMetrics 요청 실패 → Realized Cap 지표 스킵: {e}",
+            file=sys.stderr,
+        )
+        return pd.DataFrame()
+
     j = resp.json()
     data = j.get("data", [])
 
