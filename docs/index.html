@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>Crypto Liquidity Dashboard (Stable Local)</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+    h1 { text-align: center; }
+    section { margin-bottom: 40px; }
+    img { border: 1px solid #ddd; }
+    .updated { text-align: right; color: #666; font-size: 0.9em; }
+    .score-card {
+      border: 1px solid #ddd;
+      padding: 16px;
+      border-radius: 10px;
+      background: #fafafa;
+    }
+    .score-card ul { margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>암호화폐 자금 유입/유출 모니터 (1년 일봉)</h1>
+  <div class="updated">Last updated: 2025-12-07</div>
+  
+        <section class="score-card">
+          <h2>오늘의 자금 유입/유출 점수: 80 / 100</h2>
+          <p>기준일: 2025-12-06</p>
+          <p>유입 강도가 매우 높은 구간입니다. 공격적 리스크 온 환경으로 해석 가능합니다.</p>
+          <ul><li><strong>스테이블코인 시총 일일 변화</strong>: 65점 <span style='color:#666;'>(일일 변화 0.18B USD)</span></li><li><strong>BTC+ETH 선물 OI(수준)</strong>: 95점 <span style='color:#666;'>(총 OI 14.02B USD)</span></li></ul>
+        </section>
+        
+  
+            <section>
+              <h2>1. Stablecoin Market Cap</h2>
+              <p>DeFiLlama 기준 전체 USD 스테이블코인 시가총액 추이.</p>
+              <img src="charts/stablecoin.png" alt="1. Stablecoin Market Cap" style="max-width:100%;height:auto;">
+            </section>
+            
+            <section>
+              <h2>2. Spot ETF Net Flows</h2>
+              <p>Farside 기반 BTC/ETH 현물 ETF 일별 순유입/유출.</p>
+              <img src="charts/etf_flows.png" alt="2. Spot ETF Net Flows" style="max-width:100%;height:auto;">
+            </section>
+            
+            <section>
+              <h2>3. Realized Market Cap</h2>
+              <p>CoinMetrics 기반 BTC/ETH 실현 시가총액.</p>
+              <img src="charts/realized_cap.png" alt="3. Realized Market Cap" style="max-width:100%;height:auto;">
+            </section>
+            
+            <section>
+              <h2>4. Futures Open Interest</h2>
+              <p>Binance 기반 BTC/ETH 선물 미결제약정(USD).</p>
+              <img src="charts/open_interest.png" alt="4. Futures Open Interest" style="max-width:100%;height:auto;">
+            </section>
+            
+</body>
+</html>
